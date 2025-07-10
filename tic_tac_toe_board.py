@@ -51,7 +51,7 @@ class TicTacToeBoard: #the blueprint (class)
     def check_draw(self): #If there are no spaces and there is no winner
         if "" not in self.positions and self.check_winner() is None: 
             self.state = "draw"
-            print("Draw")
+            print("It is a draw")
             return True
         return False       #If the above if statement did not happen, then report false
     
