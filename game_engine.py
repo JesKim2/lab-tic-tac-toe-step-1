@@ -7,6 +7,7 @@ player_symbol = input("Who are you (x or o)?") #player decides whether they are 
 if player_symbol == "x":
     opponent_symbol = "o"
 else:
+    player_symbol = "o"
     opponent_symbol = "x"
 
 while board.state == "is_playing": #repeats until game is over
