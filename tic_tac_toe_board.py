@@ -63,12 +63,6 @@ class TicTacToeBoard: #the blueprint (class)
     
 board = TicTacToeBoard() #This is an instance of the class where board is an object
 
-if __name__ == "__main__":
-    while board.state == "is_playing":
-        print(board.player_turn)
-        print(board.positions)
-        print(board.state) 
-        board.make_move(int(input("Enter board position: ")))
     
 
     
