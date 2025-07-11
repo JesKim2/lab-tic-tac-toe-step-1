@@ -19,8 +19,9 @@ class TicTacToeBoard:
     positions: list = field(default_factory=lambda: ["", "", "", "", "", "", "", "", ""])
   
     def is_my_turn(self, i_am: str) -> bool:
-        if i_am == self.player_turn and self.state == "is_playing": 
-            return True
+        if i_am == self.player_turn:
+            if self.state == "is_playing": 
+                return True
         else:
             return False
         
