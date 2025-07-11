@@ -11,7 +11,7 @@ async def handle_board_state(i_am_playing: str, redis_client):
     if board is None: #checks if the board did not load, and reminds the user to use reset
         print("No saved board found. Did you forget to --reset?") 
         return
-    if board.state == "winner_decided": # always check for winner after loading
+    if board.state == "winner_decided": #always check for winner after loading
         print("Game Over, winner is", board.winner)
         return
     elif board.state == "draw":
@@ -36,7 +36,7 @@ async def handle_board_state(i_am_playing: str, redis_client):
                     return
                 await board.save_to_redis(team_number=1) #save the board
                 await redis_client.publish(CHANNEL_NAME, "board_updated") #publish the board
-                # show updated board after successful move
+                #show updated board after successful move
                 import json
                 print(json.dumps(board.to_dict(), indent=2)) #show the updated board
 
