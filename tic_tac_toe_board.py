@@ -1,22 +1,23 @@
 from dataclasses import dataclass, field
-import redis #redis is a library that allows us to connect to a Redis database
-from redis.commands.json.path import Path #redis commands are used to interact with the Redis database
-import os #os is a library that allows us to access environment variables
+import redis.asyncio as aioredis #imported redis.asyncio to have async work
+from redis.commands.json.path import Path 
+import os 
 
-r = redis.Redis( #redis connection
-    host='ai.thewcl.com', #host
-    port=6379, #port
-    password=os.getenv("PASSWORD"), #password
-    decode_responses=True #decode_responses=True means that the data will be decoded from bytes to strings
+r = aioredis.Redis( #have aioredis.Redis now instead of the regular redis from before
+    host='ai.thewcl.com', 
+    port=6379,
+    password=os.getenv("PASSWORD"), 
+    decode_responses=True 
 )
 
-REDIS_KEY_TEMPLATE = "tic_tac_toe:game_state:{team_number}" #this is the template for my Redis keys and team_number can be replaced with any number
+REDIS_KEY_TEMPLATE = "tic_tac_toe:game_state:{team_number}" 
 
 @dataclass
 class TicTacToeBoard: 
     state: str = "is_playing" 
     player_turn: str = "x" 
     positions: list = field(default_factory=lambda: ["", "", "", "", "", "", "", "", ""])
+    winner: str = ""  # <-- NEW LINE
   
     def is_my_turn(self, i_am: str) -> bool:
         if i_am == self.player_turn and self.state == "is_playing": 
@@ -44,19 +45,20 @@ class TicTacToeBoard:
             
     def check_winner(self):
         winning_lines = [ 
-        [0, 1, 2],
-        [3, 4, 5],
-        [6, 7, 8],
-        [0, 3, 6],
-        [1, 4, 7],
-        [2, 5, 8],
-        [0, 4, 8],
-        [2, 4, 6]
-    ]
+            [0, 1, 2],
+            [3, 4, 5],
+            [6, 7, 8],
+            [0, 3, 6],
+            [1, 4, 7],
+            [2, 5, 8],
+            [0, 4, 8],
+            [2, 4, 6]
+        ]
         for line in winning_lines:
             a, b, c = line    
             if self.positions[a] != "" and self.positions[a] == self.positions[b] == self.positions[c]: 
                 self.state = "winner_decided"
+                self.winner = self.positions[a] #sets the winner
                 return self.positions[a]
         return None           
     
@@ -73,30 +75,31 @@ class TicTacToeBoard:
         else:
             self.player_turn = "x"
     
-    def serialize(self): #serialize turns the object into a JSON string
+    def serialize(self): 
         return {
-            "state": self.state, #game state key
-            "player_turn": self.player_turn, #player turn key
-            "positions": self.positions #positions key
-        }
+            "state": self.state, 
+            "player_turn": self.player_turn, 
+            "positions": self.positions,
+            "winner": self.winner
+        } 
     
-    def save_to_redis(self, team_number: int):
-        redis_key = REDIS_KEY_TEMPLATE.format(team_number=team_number) #creates a new variable called redis key with the template
-        board_data = self.serialize() #uses the serialize function to turn the object into a JSON string and store into board_data
-        r.json().set(redis_key, Path("$"), board_data) #saves the board data to redis
+    async def save_to_redis(self, team_number: int): 
+        redis_key = REDIS_KEY_TEMPLATE.format(team_number=team_number) #created a redis key
+        board_data = self.serialize() #serialized the board data
+        await r.json().set(redis_key, Path("$"), board_data) 
 
-    @classmethod #this is a class method, not an instance method
-    def load_from_redis(cls, team_number: int): #we load the object from redis and since it is a class, instead of self, we use cls
-        redis_key = REDIS_KEY_TEMPLATE.format(team_number=team_number) #creates a new variable called redis key with the template
-        data = r.json().get(redis_key) #gets the data from the variable redis_key
-        if data:
-            return cls(**data) #returns the object if the data is not empty
+    @classmethod 
+    async def load_from_redis(cls, team_number: int): 
+        redis_key = REDIS_KEY_TEMPLATE.format(team_number=team_number) 
+        data = await r.json().get(redis_key)
+
+        if data and isinstance(data, dict):  # now checking for a dictionary
+            return cls(**data)
         else:
-            return None #returns None if the data is empty
+            return None
 
-    def reset(self, team_number: int): #resets the board
-        self.state = "is_playing" #changes the state to is_playing again
-        self.player_turn = "x" #changes the player turn to x again
-        self.positions = ["", "", "", "", "", "", "", "", ""] #resets the positions again
-        self.save_to_redis(team_number=team_number) #saves the board to redis
-
+    async def reset(self, team_number: int): 
+        self.state = "is_playing" 
+        self.player_turn = "x" 
+        self.positions = ["", "", "", "", "", "", "", "", ""] 
+        await self.save_to_redis(team_number=team_number)
