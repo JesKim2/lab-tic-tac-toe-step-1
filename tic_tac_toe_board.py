@@ -1,9 +1,10 @@
-from dataclasses import dataclass, field
-import redis.asyncio as aioredis #imported redis.asyncio to have async work
+from dataclasses import dataclass, field, asdict
+import redis.asyncio as aioredis 
 from redis.commands.json.path import Path 
 import os 
 
-r = aioredis.Redis( #have aioredis.Redis now instead of the regular redis from before
+
+r = aioredis.Redis( 
     host='ai.thewcl.com', 
     port=6379,
     password=os.getenv("PASSWORD"), 
@@ -17,7 +18,7 @@ class TicTacToeBoard:
     state: str = "is_playing" 
     player_turn: str = "x" 
     positions: list = field(default_factory=lambda: ["", "", "", "", "", "", "", "", ""])
-    winner: str = ""  # <-- NEW LINE
+    winner: str = ""  
   
     def is_my_turn(self, i_am: str) -> bool:
         if i_am == self.player_turn and self.state == "is_playing": 
@@ -25,24 +26,33 @@ class TicTacToeBoard:
         else:
             return False
         
-    def make_move(self, index: int): 
-        if self.state != "is_playing":
-            print("Game is not playing")
-            return
-        if index < 0 or index > 8: 
-            print("Invalid index")
-            return
-        if self.positions[index] != "": 
-            print("Position already taken")
-            return
-        print("Player", self.player_turn, "is making a move") 
-        self.positions[index] = self.player_turn
-        print(self.positions)
-        self.check_winner() 
-        self.check_draw() 
+    def make_move(self, index: int): #now is a dictionary
+        if self.state != "is_playing": #returns a dictionary
+            return { #success key is false and sends a message explaining the issue
+                "success": False,
+                "message": "Game is not currently active.",
+            }
+        if index < 0 or index > 8: #returns a dictionary
+            return { #success key is false and sends a message explaining the issue 
+                "success": False,
+                "message": "Invalid index. Please enter a number between 0 and 8.",
+            }
+        if self.positions[index] != "": #returns a dictionary
+            return { #success key is false and sends a message explaining the issue
+                "success": False,
+                "message": "That position is already taken.",
+            }
+        self.positions[index] = self.player_turn #updates the board
+        self.check_winner()
+        self.check_draw()
         if self.state == "is_playing":
-            self.switch_turn() 
-            
+            self.switch_turn()
+        return { #returns a dictionary
+            "success": True,
+            "message": "Move accepted.",
+            "board": self.positions,
+        }
+    
     def check_winner(self):
         winning_lines = [ 
             [0, 1, 2],
@@ -75,17 +85,12 @@ class TicTacToeBoard:
         else:
             self.player_turn = "x"
     
-    def serialize(self): 
-        return {
-            "state": self.state, 
-            "player_turn": self.player_turn, 
-            "positions": self.positions,
-            "winner": self.winner
-        } 
+    def to_dict(self): #replaced serialize
+        return asdict(self) #asdict turns the entire object into a regular dictionary to store
     
     async def save_to_redis(self, team_number: int): 
-        redis_key = REDIS_KEY_TEMPLATE.format(team_number=team_number) #created a redis key
-        board_data = self.serialize() #serialized the board data
+        redis_key = REDIS_KEY_TEMPLATE.format(team_number=team_number) 
+        board_data = self.to_dict() #turns the board into a dictionary
         await r.json().set(redis_key, Path("$"), board_data) 
 
     @classmethod 
@@ -93,7 +98,7 @@ class TicTacToeBoard:
         redis_key = REDIS_KEY_TEMPLATE.format(team_number=team_number) 
         data = await r.json().get(redis_key)
 
-        if data and isinstance(data, dict):  # now checking for a dictionary
+        if data and isinstance(data, dict): 
             return cls(**data)
         else:
             return None
@@ -103,3 +108,4 @@ class TicTacToeBoard:
         self.player_turn = "x" 
         self.positions = ["", "", "", "", "", "", "", "", ""] 
         await self.save_to_redis(team_number=team_number)
+
