@@ -40,3 +40,7 @@ async def reset_board():
     new_board = TicTacToeBoard()
     await new_board.save_to_redis(team_number=1)
     return { "message": "Game reset." }
+
+#game_engine.py does not use the TicTacToeBoard class anymore. 
+#It doesn't know how the game works, it just sends requests to the server at localhost:8000. 
+#The server handles all the game logic, not the CLI.
