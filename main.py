@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Request, Body #imports FastAPI, Request, and Body
 from tic_tac_toe_board import TicTacToeBoard #imports TicTacToeBoard
 import os #imports os
+import redis.asyncio as aioredis #imports Redis for publishing updates
 
 app = FastAPI() #creates the app
 
@@ -21,6 +22,16 @@ async def make_move(player: str = Body(...), index: int = Body(...)): #accepts a
     result = board.make_move(index) #get the result dict
     if result["success"]: #if the move was successful
         await board.save_to_redis(team_number=1) #save the board
+
+        # publish update to Redis so other clients know the board changed
+        redis = aioredis.Redis(
+            host='ai.thewcl.com',
+            port=6379,
+            password=os.getenv("PASSWORD"),
+            decode_responses=True
+        )
+        await redis.publish("tictactoe_game_state_changed", "board_updated") #publishes the update to Redis
+
     return result #returns the result dict
 
 @app.post("/reset") #resets the board
