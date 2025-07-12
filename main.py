@@ -27,7 +27,10 @@ async def make_move(player: str = Body(...), index: int = Body(...)): #accepts a
 async def reset_board():
     new_board = TicTacToeBoard()  # empty board is created
     await new_board.save_to_redis(team_number=1)  # overwrite any existing board
-    return { "message": "Game reset." }
+    return { 
+        "message": "Game reset.",
+        "board": new_board.to_dict()
+    }
 
 #FastAPI delegates logic by accepting the HTTP requests and calls the methods with the data from the request
 #FastAPI itself does not know the game rules, it just calls the methods
