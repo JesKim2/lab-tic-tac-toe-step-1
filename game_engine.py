@@ -1,15 +1,14 @@
 import argparse
 import asyncio
 import os
-import httpx  #used to send HTTP requests
-import redis.asyncio as aioredis  #used for Pub/Sub
+import httpx 
+import redis.asyncio as aioredis 
 
 CHANNEL_NAME = "tictactoe_game_state_changed"
 
-#now uses HTTP to get and submit board state instead of calling board methods
 async def handle_board_state(i_am_playing: str, redis_client):
-    async with httpx.AsyncClient() as client: #uses HTTP to get and submit board state instead of calling board methods
-        response = await client.get("http://localhost:8000/state") #gets board via HTTP
+    async with httpx.AsyncClient() as client: 
+        response = await client.get("http://localhost:8000/state") 
         board_data = response.json()
 
         if "error" in board_data:
@@ -30,7 +29,6 @@ async def handle_board_state(i_am_playing: str, redis_client):
 
             try:
                 index = int(input(f"{i_am_playing}'s move (0–8): "))
-                #send move via HTTP POST
                 response = await client.post("http://localhost:8000/move", json={ #sends POST to /move
                     "player": i_am_playing,
                     "index": index
@@ -38,9 +36,9 @@ async def handle_board_state(i_am_playing: str, redis_client):
                 result = response.json()
                 print(result.get("message") or result.get("error"))
 
-                if result.get("success"): #if move was successful
-                    response = await client.get("http://localhost:8000/state")  # refresh state after move
-                    board_data = response.json() #get updated board state
+                if result.get("success"): 
+                    response = await client.get("http://localhost:8000/state") 
+                    board_data = response.json() 
 
                     if board_data["state"] == "winner_decided":
                         print(f"Game Over, winner is {board_data['winner']}")
@@ -69,11 +67,10 @@ async def listen_for_updates(i_am_playing: str):
             await handle_board_state(i_am_playing, redis_client)
 
 async def main():
-    async with httpx.AsyncClient() as client: #uses HTTP to get and submit board state instead of calling board methods
-        if args.reset: #if reset flag is set
-            #sends POST to /reset instead of calling board directly
-            response = await client.post("http://localhost:8000/reset") #sends POST to /reset
-            print(response.json()["message"]) #prints message from response
+    async with httpx.AsyncClient() as client: 
+        if args.reset: 
+            response = await client.post("http://localhost:8000/reset") 
+            print(response.json()["message"]) 
             return
 
     print("Time to play Tic Tac Toe!")
