@@ -52,7 +52,7 @@ class TicTacToeBoard:
         return None
 
     def check_draw(self):
-        if "" not in self.positions and self.check_winner() is None:
+        if "" not in self.positions and self.state != "winner_decided":
             self.state = "draw"
             print("It is a draw")
             return True
